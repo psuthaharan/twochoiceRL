@@ -1,0 +1,40 @@
+Package: twochoiceRL
+Type: Package
+Title: Modeling Behavior for Two-Choice Decisions
+Version: 0.1.0
+Authors@R:
+  c(person(given = "Praveen",
+           family = "Suthaharan",
+           role = c("aut", "cre"),
+           email = "praveen.suthaharan@yale.edu"),
+    person(given = "Philip",
+           family = "Corlett",
+           role = "aut",
+           email = "philip.corlett@yale.edu"),
+    person(given = "Yuen Siang",
+           family = "Ang",
+           role = "aut",
+           email = "ang_yuen_siang@ihpc.a-star.edu.sg"))
+Maintainer: Praveen Suthaharan <praveen.suthaharan@yale.edu>
+Description: Provides functions for (1) simulating a two-choice decision dataset based on the Q-learning model,
+    (2) visualizing behavior of a particular simulated individual, and (3) estimating behavior - the learning 
+    rate (alpha) and choice randomness (beta) - from the simulated dataset using three parameter estimation 
+    techniques: Maximum-Likelihood Estimation (MLE), Maximum A Posteriori (MAP), and Expectation-Maximization 
+    with Laplace approximation (EML).
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.1.0
+Imports: 
+    foreach,
+    ggplot2,
+    ggpubr,
+    gganimate,
+    trust,
+    Metrics,
+    ggthemes,
+    grid
+Suggests: 
+    knitr,
+    rmarkdown
+

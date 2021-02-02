@@ -1,0 +1,100 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
+
+# Modeling two-choice decision behavior in R
+
+<!-- badges: start -->
+<!-- badges: end -->
+
+See [Suthaharan, P., Corlett, P.R., & Ang, Y.S. (2021). Computational modeling of behavioral tasks: An illustration from a classic reinforcement learning paradigm]() for more detail.
+
+Questions? Contact Praveen Suthaharan (praveen.suthaharan@yale.edu).
+
+—————
+
+The goal of *twochoiceRL* is to educate users on how to simulate two-choice decision behavior and, subsequently, take the simulated data and estimate the behavioral parameters.
+
+## Installation
+
+<!-- You can install the released version of twochoiceRL from [CRAN](https://CRAN.R-project.org) with: -->
+
+<!-- ``` r -->
+<!-- install.packages("twochoiceRL") -->
+<!-- ``` -->
+
+
+You can install the development version of *twochoiceRL* from [GitHub](https://github.com/psuthaharan/twochoiceRL) with:
+
+``` r
+# install.packages("devtools")
+devtools::install_github("psuthaharan/twochoiceRL")
+```
+## Simulation
+
+Simulate behavior:
+
+```{r data}
+library(twochoiceRL)
+# generate 100 individuals
+# dataset1 contains behavioral data keeping only those selected-choice trials
+dataset1 <- simulate_twochoiceRL(n_subj = 100, n_tr = 200, trials_unique = TRUE)
+
+# dataset2 contains behavioral data keeping all trials (selected-choice and the non-selected-choice)
+dataset2 <- simulate_twochoiceRL(n_subj = 100, n_tr = 200, trials_unique = FALSE)
+```
+
+
+## Visualization
+
+Plot behavior:
+
+```{r plot, message=FALSE}
+# for plotting purpose - let's use dataset2
+# You randomly select a participant to observe his/her behavior
+
+# Participant 100
+# View first 10 rows of data
+head(dataset2$twochoiceRL[[100]],10)
+
+
+# Visualize behavior 
+plot_twochoiceRL(data = dataset2, subj = 100, colors = c("#749dae","#5c1a33"))
+
+# Visualize behavior - animated 
+plot_twochoiceRL(data = dataset2, subj = 100, colors = c("#749dae","#5c1a33"), plot_type = "animate")
+
+
+```
+
+
+## Estimation
+
+Estimate behavioral parameters from simulated data:
+
+```{r estimation, message=FALSE, results='hide'}
+# Run MLE (elapsed time: ~ 6 min)
+estimate_twochoiceRL(data = dataset1, method = "mle", plot = TRUE)
+
+# Run MAP (elapsed time: ~ 5 min)
+estimate_twochoiceRL(data = dataset1, method = "map", plot = TRUE)
+
+# Run EML (elapsed time: ~ 1.4 hours)
+estimate_twochoiceRL(data = dataset1, method = "eml", plot = TRUE)
+```
+
+
+
+
+
