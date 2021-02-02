@@ -37,4 +37,5 @@ Imports:
 Suggests: 
     knitr,
     rmarkdown
-
+URL: https://github.com/psuthaharan/twochoiceRL
+BugReports: https://github.com/psuthaharan/twochoiceRL/issues
