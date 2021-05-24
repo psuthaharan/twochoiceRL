@@ -6,12 +6,14 @@
 \usage{
 map_twochoiceRL(
   data = NULL,
-  param = list(init.x1, init.x2),
-  prior.mean = c(0, 0),
-  prior.sd = c(5, 5),
+  param = list(init_x1, init_x2),
+  prior_mean = c(m1, m2),
+  prior_sd = c(s1, s2),
   fn = "map.objectiveFunction",
   opt = "TRM",
-  nRes = 5
+  radius = c(tr_rad[1], tr_rad[2]),
+  nRes = nRes,
+  progress_bar = progress_bar
 )
 }
 \arguments{
@@ -19,15 +21,19 @@ map_twochoiceRL(
 
 \item{param}{randomly generated initial parameters.}
 
-\item{prior.mean}{mean priors for x1 and x2, respectively. Defaults to mean 0 for both parameters.}
+\item{prior_mean}{mean priors for x1 and x2, respectively. Defaults to mean 0 for both parameters.}
 
-\item{prior.sd}{standard deviation priors for x1 and x2, respectively. Defaults to 5 for both parameters.}
+\item{prior_sd}{standard deviation priors for x1 and x2, respectively. Defaults to 5 for both parameters.}
 
 \item{fn}{objective function being minimized}
 
 \item{opt}{optimization algorithm used. Defaults to trust-region method (trm)}
 
+\item{radius}{starting and maximum allowed trust region radius. Defaults to 1 and 5.}
+
 \item{nRes}{number of restarts. Defaults to 5.}
+
+\item{progress_bar}{track completion time of estimation. Defaults to TRUE.}
 }
 \value{
 A list containing the sum log-likelihood, map estimates of parameter 1 per subject,
@@ -36,8 +42,5 @@ A list containing the sum log-likelihood, map estimates of parameter 1 per subje
 }
 \description{
 This function runs the MAP technique to recover behavior in a two-choice decision task.
-}
-\examples{
-map_twochoiceRL()
 }
 \keyword{internal}

@@ -1,69 +1,105 @@
 #' Estimate behavior in a two-choice decision task
 #'
-#' This function performs parameter estimation to recover behavior in a two-choice decision task
+#' This function performs parameter estimation to recover behavior in a
+#' two-choice decision task
+#' @param seed_value user-specified random value that ensures replication of results. Defaults to 528.
 #' @param data simulated two-choice task data
-#' @param method parameter estimation technique used; either maximum-likelihood estimation (mle),
-#'               maximum a posteriori (map) or expectation-maximization with laplace approximation (eml).
-#'               Defaults to mle.
-#' @param plot visualize estimation performance between true parameters vs estimated parameters.
-#'             Defaults to TRUE.
+#' @param method parameter estimation technique used; either maximum-likelihood
+#'   estimation (mle), maximum a posteriori (map) or expectation-maximization
+#'   with laplace approximation (eml). Defaults to mle.
+#' @param nRes number of restarts. Defaults to 5.
+#' @param tr_rad starting and maximum allowed trust region radius. Defaults to 1 and 5.
+#' @param prior_mean initial prior means of parameters (x1,x2). Set value if method = "map" or "eml".
+#' @param prior_sd initial prior standard deviations of parameters (x1,x2). Set value if method = "map" or "eml".
+#' @param plot visualize estimation performance between true parameters vs
+#'   estimated parameters. Defaults to FALSE.
+#' @param progress_bar track completion time of estimation procedure. Defaults to TRUE.
 #'
 #'
-#' @return A plot illustrating the correlation between the true parameters and estimated parameters, and a list
-#'         containing a dataframe of the true and estimated parameter values, the correlation value of
-#'         parameter 1, and the correlation value of parameter 2.
+#' @return A list containing a dataframe of the true and estimated parameter
+#'   values, the measures of the bias, rmse and pearson correlation of parameters x1
+#'   and x2, the posterior hyperparameters (if method = "eml") per iteration,
+#'   plot (if plot = TRUE) of the relationship between the true and estimated
+#'   parameter values, and a plot (if method = eml and plot = TRUE) of the posterior
+#'   hyperparameters per iteration.
 #'
 #'
 #' @export
 #'
-#' @import Metrics ggthemes grid
+#' @import Metrics stats ggthemes grid tidyr ggridges ggjoy
+#'
 #' @examples
 #'
-#' # Save simulated task data to a variable, say, data
-#' data <- simulate_twochoiceRL(trials.unique = TRUE)
+#' # Save simulated task data to a variable, say, data_sim
+#' data_sim <- simulate_twochoiceRL(trials_unique = TRUE)
 #'
 #' # Recover behavioral parameters using maximum-likelihood estimation (MLE)
-#' estimate_twochoiceRL(data = data, method = "mle", plot=TRUE)
+#' est_mle <- estimate_twochoiceRL(data = data_sim, method = "mle", plot=FALSE)
+#'
+#' # View the true and MLE-estimated parameter values
+#' View(est_mle[[1]]$value)
+#'
+#' # If plot=TRUE, view correlation plot between the true and MLE-estimated parameter for x1
+#' View(est_mle[[2]])
+#'
+#'
+#'
 
-estimate_twochoiceRL <- function(data = NULL,
-                                method = "mle",
-                                plot = TRUE) { # start estimation
+estimate_twochoiceRL <- function(seed_value = 528,
+                                 data = NULL,
+                                 method = "mle",
+                                 nRes = 5,
+                                 tr_rad = c(1,5),
+                                 prior_mean = c(NULL,NULL),
+                                 prior_sd = c(NULL,NULL),
+                                 plot = FALSE,
+                                 progress_bar = TRUE) { # start estimation
 
+  # ensures replication of result - the rnorm() function
+  # used in the next few lines will result in the same
+  # sequence of random numbers for the specified seed
+  set.seed(seed_value)
 
   # if specified estimation method is MLE, then run MLE
   if (method == "mle") {
 
     # randomly generate initial guesses for parameters
-    init.x1 <- rnorm(data$subjects,0,5)
-    init.x2 <- rnorm(data$subjects,0,5)
+    init_x1 <- rnorm(data$subjects,0,5)
+    init_x2 <- rnorm(data$subjects,0,5)
 
 
     # perform MLE
     mle_data <- mle_twochoiceRL(data = data,                      # simulated task data
-                               param = list(init.x1,init.x2),    # initial guesses for parameters
-                               fn = "mle.objectiveFunction",     # likelihood function being minimized
-                               opt = "TRM",                      # trust-region optimization method
-                               nRes = 5)                         # random restarts
+                                param = list(init_x1,init_x2),    # initial guesses for parameters
+                                fn = "mle.objectiveFunction",     # likelihood function being minimized
+                                opt = "TRM",                      # trust-region optimization method
+                                radius = c(tr_rad[1],tr_rad[2]),  # starting and maximum allowed trust region radius
+                                nRes = nRes,                      # random restarts
+                                progress_bar = progress_bar)      # track completion time of estimation
 
 
     # save mle results
-    x1.hat <- mle_data[[2]] # estimates of x1
-    x2.hat <- mle_data[[3]] # estimates of x2
+    x1_hat <- mle_data[[2]] # estimates of x1
+    x2_hat <- mle_data[[3]] # estimates of x2
 
     # store true and estimated parameters
-    df <- data.frame(true.x1 = data$x1,
-                     true.x2 = data$x2,
-                     est.x1  = x1.hat,
-                     est.x2  = x2.hat)
+    x1 <- data$x1
+    x2 <- data$x2
+
+    df <- data.frame(x1,
+                     x2,
+                     x1_hat,
+                     x2_hat)
 
     # mle function output
     results <- list(value = df,
-                    bias.x1 = bias(df$true.x1,df$est.x1),
-                    bias.x2 = bias(df$true.x2,df$est.x2),
-                    rmse.x1 = rmse(df$true.x1,df$est.x1),
-                    rmse.x2 = rmse(df$true.x2,df$est.x2),
-                    corr.x1 = cor(df$true.x1,df$est.x1),
-                    corr.x2 = cor(df$true.x2,df$est.x2))
+                    bias_x1 = bias(x1,x1_hat),
+                    bias_x2 = bias(x2,x2_hat),
+                    rmse_x1 = rmse(x1,x1_hat),
+                    rmse_x2 = rmse(x2,x2_hat),
+                    corr_x1 = cor(x1,x1_hat),
+                    corr_x2 = cor(x2,x2_hat)
+    )
 
     # if user doesn't want to see the plot, then only return results
     if (plot == FALSE){
@@ -71,21 +107,35 @@ estimate_twochoiceRL <- function(data = NULL,
     }
     else {
 
+
       # generate plot 1
       p1 <- ggplot(df,
-                   aes(x=true.x1,y=est.x1)) +
+                   aes(x=x1,y=x1_hat)) +
         geom_point() +
         geom_smooth(method = "lm", se = FALSE) +
-        ylim(-3,10) +
+        coord_cartesian(xlim=c(min(x1,x1_hat),
+                               max(x1,x1_hat)),
+                        ylim=c(min(x1,x1_hat),
+                               max(x1,x1_hat))) +
          labs(x = expression("x"[1]),
               y = expression(hat(x)[1])) +
-        theme_pubr() +
+        theme(#axis.title.y = element_blank(),
+              #axis.title.x = element_blank(),
+              #axis.text = element_blank(),
+              panel.background = element_rect(),
+              panel.grid.major = element_line(size=1),
+              panel.grid.minor = element_line(size=1),
+              axis.ticks = element_line(colour="black", size = 1.5),
+              panel.border = element_rect(colour = "black", fill = NA, size = 2.5),
+              legend.text = element_blank(),
+              legend.position = "none",
+              aspect.ratio = 1) +
         annotate("label",
-                 label = paste("bias =", round(bias(data$x1,mle_data[[2]]),3), "\n",
-                               "rmse =", round(rmse(data$x1,mle_data[[2]]),3),"\n",
-                               "r =", round(cor(data$x1, mle_data[[2]], method = "pearson"),3)),
-                 x=0,
-                 y=6.5,
+                 label = paste("bias =", round(bias(x1,x1_hat),3), "\n",
+                               "rmse =", round(rmse(x1,x1_hat),3),"\n",
+                               "r =", round(cor(x1,x1_hat, method = "pearson"),3)),
+                 x=max(x1), # adjust position based on plot
+                 y=min(x1_hat)+1, # adjust position based on plot
                  size=4) +
 
       # add reference line
@@ -93,19 +143,32 @@ estimate_twochoiceRL <- function(data = NULL,
 
       # generate plot 2
       p2 <- ggplot(df,
-                   aes(x=true.x2,y=est.x2)) +
+                   aes(x=x2,y=x2_hat)) +
         geom_point() +
         geom_smooth(method = "lm", se = FALSE) +
-        ylim(-5,5) +
+        coord_cartesian(xlim=c(min(x2,x2_hat),
+                               max(x2,x2_hat)),
+                        ylim=c(min(x2,x2_hat),
+                               max(x2,x2_hat))) +
         labs(x = expression("x"[2]),
              y = expression(hat(x)[2])) +
-        theme_pubr() +
+        theme(#axis.title.y = element_blank(),
+              #axis.title.x = element_blank(),
+              #axis.text = element_blank(),
+              panel.background = element_rect(),
+              panel.grid.major = element_line(size=1),
+              panel.grid.minor = element_line(size=1),
+              axis.ticks = element_line(colour="black", size = 1.5),
+              panel.border = element_rect(colour = "black", fill = NA, size = 2.5),
+              legend.text = element_blank(),
+              legend.position = "none",
+              aspect.ratio = 1) +
         annotate("label",
-                 label = paste("bias =", round(bias(data$x2, mle_data[[3]]),3),"\n",
-                               "rmse =", round(rmse(data$x2, mle_data[[3]]),3),"\n",
-                               "r =", round(cor(data$x2, mle_data[[3]], method = "pearson"),3)),
-                 x=-1,
-                 y=3.6,
+                 label = paste("bias =", round(bias(x2, x2_hat),3),"\n",
+                               "rmse =", round(rmse(x2, x2_hat),3),"\n",
+                               "r =", round(cor(x2, x2_hat, method = "pearson"),3)),
+                 x=max(x2), # adjust position based on plot
+                 y=min(x2_hat)+1, # adjust position based on plot
                  size=4) +
 
       # add reference line
@@ -116,51 +179,71 @@ estimate_twochoiceRL <- function(data = NULL,
 
 
       # display the plot AND the estimation performance results
-      print(plot)
-      return(results)
+      return(list(results, p1, p2, plot))
     }
+
 
   } else if (method == "map"){ # if specified estimation method is MAP, then run MAP
 
     # randomly generate initial guesses for parameters
-    init.x1 <- rnorm(data$subjects,0,5)
-    init.x2 <- rnorm(data$subjects,0,5)
+    init_x1 <- rnorm(data$subjects,0,5)
+    init_x2 <- rnorm(data$subjects,0,5)
 
-    # initialize priors for parameters
-    m1 = 0
-    s1 = 5
+    if (is.null(prior_mean) == TRUE && is.null(prior_sd) == TRUE){
 
-    m2 = 0
-    s2 = 5
+      message("MAP requires specification of initial priors; defaulting to prior_mean = c(0,0) and prior_sd = c(5,5)")
+
+      # initialize priors for parameters
+      m1 = 0
+      s1 = 5
+
+      m2 = 0
+      s2 = 5
+
+    } else {
+
+      # initialize priors for parameters
+      m1 = prior_mean[1]
+      s1 = prior_sd[1]
+
+      m2 = prior_mean[2]
+      s2 = prior_sd[2]
+
+    }
 
     map_data <- map_twochoiceRL(data = data,
-                               param = list(init.x1,init.x2),
-                               prior.mean = c(m1,m2),
-                               prior.sd = c(s1,s2),
+                               param = list(init_x1,init_x2),
+                               prior_mean = c(m1,m2),
+                               prior_sd = c(s1,s2),
                                fn = "map.objectiveFunction",
                                opt = "TRM",
-                               nRes = 5)
+                               radius = c(tr_rad[1],tr_rad[2]),
+                               nRes = nRes,
+                               progress_bar = progress_bar)
 
 
-    # save map results
-    x1.hat <- map_data[[2]] # estimates of x1
-    x2.hat <- map_data[[3]] # estimates of x2
+  # save map results
+  x1_hat <- map_data[[2]] # estimates of x1
+  x2_hat <- map_data[[3]] # estimates of x2
 
-    # store true and estimated parameters
-    df <- data.frame(true.x1 = data$x1,
-                     true.x2 = data$x2,
-                     est.x1  = x1.hat,
-                     est.x2  = x2.hat)
+  # store true and estimated parameters
+  x1 <- data$x1
+  x2 <- data$x2
 
-    # map function output
-    results <- list(value = df,
-                    bias.x1 = bias(df$true.x1,df$est.x1),
-                    bias.x2 = bias(df$true.x2,df$est.x2),
-                    rmse.x1 = rmse(df$true.x1,df$est.x1),
-                    rmse.x2 = rmse(df$true.x2,df$est.x2),
-                    corr.x1 = cor(df$true.x1,df$est.x1),
-                    corr.x2 = cor(df$true.x2,df$est.x2)
-    )
+  df <- data.frame(x1,
+                   x2,
+                   x1_hat,
+                   x2_hat)
+
+  # map function output
+  results <- list(value = df,
+                  bias_x1 = bias(x1,x1_hat),
+                  bias_x2 = bias(x2,x2_hat),
+                  rmse_x1 = rmse(x1,x1_hat),
+                  rmse_x2 = rmse(x2,x2_hat),
+                  corr_x1 = cor(x1,x1_hat),
+                  corr_x2 = cor(x2,x2_hat)
+  )
 
 
     if (plot == FALSE){
@@ -170,19 +253,32 @@ estimate_twochoiceRL <- function(data = NULL,
 
       # generate plot 1
       p1 <- ggplot(df,
-                   aes(x=true.x1,y=est.x1)) +
+                   aes(x=x1,y=x1_hat)) +
         geom_point() +
         geom_smooth(method = "lm", se = FALSE) +
-        ylim(-3,10) +
+        coord_cartesian(xlim=c(min(x1,x1_hat),
+                               max(x1,x1_hat)),
+                        ylim=c(min(x1,x1_hat),
+                               max(x1,x1_hat))) +
         labs(x = expression("x"[1]),
              y = expression(hat(x)[1])) +
-        theme_pubr() +
+        theme(#axis.title.y = element_blank(),
+              #axis.title.x = element_blank(),
+              #axis.text = element_blank(),
+              panel.background = element_rect(),
+              panel.grid.major = element_line(size=1),
+              panel.grid.minor = element_line(size=1),
+              axis.ticks = element_line(colour="black", size = 1.5),
+              panel.border = element_rect(colour = "black", fill = NA, size = 2.5),
+              legend.text = element_blank(),
+              legend.position = "none",
+              aspect.ratio = 1) +
         annotate("label",
-                 label = paste("bias =", round(bias(data$x1,map_data[[2]]),3), "\n",
-                               "rmse =", round(rmse(data$x1,map_data[[2]]),3),"\n",
-                               "r =", round(cor(data$x1, map_data[[2]], method = "pearson"),3)),
-                 x=0,
-                 y=6.5,
+                 label = paste("bias =", round(bias(x1,x1_hat),3), "\n",
+                               "rmse =", round(rmse(x1,x1_hat),3),"\n",
+                               "r =", round(cor(x1, x1_hat, method = "pearson"),3)),
+                 x=max(x1), # adjust position based on plot
+                 y=min(x1_hat)+1, # adjust position based on plot
                  size=4) +
 
         # add reference line
@@ -190,19 +286,32 @@ estimate_twochoiceRL <- function(data = NULL,
 
       # generate plot 2
       p2 <- ggplot(df,
-                   aes(x=true.x2,y=est.x2)) +
+                   aes(x=x2,y=x2_hat)) +
         geom_point() +
         geom_smooth(method = "lm", se = FALSE) +
-        ylim(-5,5) +
+        coord_cartesian(xlim=c(min(x2,x2_hat),
+                               max(x2,x2_hat)),
+                        ylim=c(min(x2,x2_hat),
+                               max(x2,x2_hat))) +
         labs(x = expression("x"[2]),
              y = expression(hat(x)[2])) +
-        theme_pubr() +
+        theme(#axis.title.y = element_blank(),
+              #axis.title.x = element_blank(),
+              #axis.text = element_blank(),
+              panel.background = element_rect(),
+              panel.grid.major = element_line(size=1),
+              panel.grid.minor = element_line(size=1),
+              axis.ticks = element_line(colour="black", size = 1.5),
+              panel.border = element_rect(colour = "black", fill = NA, size = 2.5),
+              legend.text = element_blank(),
+              legend.position = "none",
+              aspect.ratio = 1) +
         annotate("label",
-                 label = paste("bias =", round(bias(data$x2, map_data[[3]]),3),"\n",
-                               "rmse =", round(rmse(data$x2, map_data[[3]]),3),"\n",
-                               "r =", round(cor(data$x2, map_data[[3]], method = "pearson"),3)),
-                 x=-1,
-                 y=3.6,
+                 label = paste("bias =", round(bias(x2, x2_hat),3),"\n",
+                               "rmse =", round(rmse(x2, x2_hat),3),"\n",
+                               "r =", round(cor(x2, x2_hat, method = "pearson"),3)),
+                 x=max(x2),
+                 y=min(x2_hat)+1,
                  size=4) +
 
       # add reference line
@@ -212,23 +321,21 @@ estimate_twochoiceRL <- function(data = NULL,
       plot <- ggarrange(p1,p2, ncol = 2, nrow = 1,common.legend = TRUE,legend = 'bottom')
 
 
-      # return output
-      print(plot)
-      return(results)
+      # display the plot AND the estimation performance results
+      return(list(results, p1, p2, plot))
     }
-
 
   } else if (method == "eml") {
 
 
-
-
-
-    d <-numeric()   # store difference values
-    diff = 1        # initialize difference for convergence
-    prev = Inf      # initialize previous objective value
+    d <-numeric()   # initialize vector to store difference of log-likelihood value per iteration
+    diff = 10000    # initialize difference in log-likelihood value for convergence
+    prev = Inf      # initialize previous log-likelihood value
     iter = 1        # initial iteration of E-M step
 
+
+    # initialize variable to store posterior hyperparameters
+    posterior_hyperparameters <- list()
 
 
     # Perform E-M step with Laplace Approximation
@@ -236,78 +343,166 @@ estimate_twochoiceRL <- function(data = NULL,
 
       # generate initial guesses for iterations
       if (iter == 1){ # for the first iteration, generate initial guesses randomly
-        init.x1 <- rnorm(data$subjects,0,5)
-        init.x2 <- rnorm(data$subjects,0,5)
+        init_x1 <- rnorm(data$subjects,0,5)
+        init_x2 <- rnorm(data$subjects,0,5)
 
-        # initialize priors for parameters
-        m1 = 0
-        s1 = 5
+        if (is.null(prior_mean) == TRUE && is.null(prior_sd) == TRUE){
 
-        m2 = 0
-        s2 = 5
+          message("EML requires specification of initial priors; defaulting to prior_mean = c(0,0) and prior_sd = c(5,5)")
+
+          # initialize priors for parameters
+          m1 = 0
+          s1 = 5
+
+          m2 = 0
+          s2 = 5
+
+        } else {
+
+          # initialize priors for parameters
+          m1 = prior_mean[1]
+          s1 = prior_sd[1]
+
+          m2 = prior_mean[2]
+          s2 = prior_sd[2]
+
+        }
+
       }else{ # for successive iterations, generate initial guesses based on previous MAP estimate
-        init.x1 <- eml_data[[2]]
-        init.x2 <- eml_data[[3]]
+        init_x1 <- eml_data[[2]]
+        init_x2 <- eml_data[[3]]
+
+        m1 <- m1_laplace
+        s1 <- s1_laplace
+
+        m2 <- m2_laplace
+        s2 <- s2_laplace
+
       }
 
     # Run E-step
     eml_data <- eml_twochoiceRL(data = data,
-                               param = list(init.x1,init.x2),
-                               prior.mean = c(m1,m2),
-                               prior.sd = c(s1,s2),
+                               param = list(init_x1,init_x2),
+                               prior_mean = c(m1,m2),
+                               prior_sd = c(s1,s2),
                                fn = "eml.objectiveFunction",
                                opt = "TRM",
-                               nRes = 5,
+                               radius = c(tr_rad[1],tr_rad[2]),
+                               nRes = nRes,
                                iter = iter,
-                               eml_data = eml_data)
+                               eml_data = eml_data,
+                               progress_bar = progress_bar)
 
-    # Run M-step with Laplace approximation: update prior mean and standard deviation
-    m1 <- mean(eml_data[[2]])
-    s1 <- sqrt(sum((eml_data[[2]]^(2))+(eml_data[[4]])-
-                     (2*eml_data[[2]]*m1)+(rep(m1^(2),data$subjects)))/(data$subjects-1))
-
-    m2 <- mean(eml_data[[3]])
-    s2 <- sqrt(sum((eml_data[[3]]^(2))+(eml_data[[5]])-
-                     (2*eml_data[[3]]*m2)+(rep(m2^(2),data$subjects)))/(data$subjects-1))
-
-    # calculate difference of objective values for convergence
+    # calculate difference in log-likelihood for convergence
     diff <- abs(eml_data[[1]] - prev)
     d[iter] <- diff
     prev <- eml_data[[1]]
-
 
     # print output in R console
     print(paste("iter", iter, ":",
                 "LL =", round(eml_data[[1]],3),",",
                 "diff =", round(diff,3),",",
-                "(m1,m2,s1,s2) =", "(",m1,",",m2,",",s1,",",s2,")"))
+                "(m1,m2,s1,s2) =", "(",round(m1,3),",",round(m2,3),",",round(s1,3),",",round(s2,3),")"))
     print("---------------------------------------------------------------------------")
 
+    # store posterior hyperparameters
+    posterior_hyperparameters[[iter]] <- c(iter,m1,m2,s1,s2)
 
+    # Run M-step with Laplace approximation: update prior mean and standard deviation
+    m1_laplace <- mean(eml_data[[2]])
+    s1_laplace <- sqrt(sum((eml_data[[2]]^(2))+(eml_data[[4]])-
+                      (2*eml_data[[2]]*m1)+(rep(m1^(2),data$subjects)))/(data$subjects-1))
+
+    m2_laplace <- mean(eml_data[[3]])
+    s2_laplace <- sqrt(sum((eml_data[[3]]^(2))+(eml_data[[5]])-
+                      (2*eml_data[[3]]*m2)+(rep(m2^(2),data$subjects)))/(data$subjects-1))
+
+    # iterate
     iter = iter+1
+
+
 
   } # end E-M procedure
 
 
     # save eml results
-    x1.hat <- eml_data[[2]] # estimates of x1
-    x2.hat <- eml_data[[3]] # estimates of x2
+    x1_hat <- eml_data[[2]] # estimates of x1
+    x2_hat <- eml_data[[3]] # estimates of x2
 
     # store true and estimated parameters
-    df <- data.frame(true.x1 = data$x1,
-                     true.x2 = data$x2,
-                     est.x1  = x1.hat,
-                     est.x2  = x2.hat)
+    x1 <- data$x1
+    x2 <- data$x2
+
+    df <- data.frame(x1,
+                     x2,
+                     x1_hat,
+                     x2_hat)
+
+    posterior_hyperparam_vals <- as.data.frame(matrix(unlist(posterior_hyperparameters),length(posterior_hyperparameters),5, byrow = TRUE))
+    colnames(posterior_hyperparam_vals) <- c("iter","m1","m2","s1","s2")
+
+
 
     # eml function output
     results <- list(value = df,
-                    bias.x1 = bias(df$true.x1,df$est.x1),
-                    bias.x2 = bias(df$true.x2,df$est.x2),
-                    rmse.x1 = rmse(df$true.x1,df$est.x1),
-                    rmse.x2 = rmse(df$true.x2,df$est.x2),
-                    corr.x1 = cor(df$true.x1,df$est.x1),
-                    corr.x2 = cor(df$true.x2,df$est.x2)
-    )
+                    bias_x1 = bias(x1,x1_hat),
+                    bias_x2 = bias(x2,x2_hat),
+                    rmse_x1 = rmse(x1,x1_hat),
+                    rmse_x2 = rmse(x2,x2_hat),
+                    corr_x1 = cor(x1,x1_hat),
+                    corr_x2 = cor(x2,x2_hat),
+                    posterior_vals = posterior_hyperparam_vals)
+
+
+    # creating variables to plot posterior hyperparameters
+    # read data
+    post_hyper_param <- results$posterior_vals
+
+
+    # x1
+    post_hyper_param_x1 <- data.frame(mean = post_hyper_param$m1,
+                                      stdev = post_hyper_param$s1,
+                                      iter = paste0("Iter_",sprintf("%02.0f", 1:nrow(post_hyper_param))),
+                                      stringsAsFactors = F)
+
+    # x2
+    post_hyper_param_x2 <- data.frame(mean = post_hyper_param$m2,
+                                      stdev = post_hyper_param$s2,
+                                      iter = paste0("Iter_",sprintf("%02.0f", 1:nrow(post_hyper_param))),
+                                      stringsAsFactors = F)
+
+
+    # points at which to evaluate the Gaussian densities
+    x1_eval <- seq(-20,20, by = 0.01) # adjust to cover the range of the mean posterior hyperparameter values
+    x2_eval <- seq(-20,20, by = 0.01) # adjust to cover the range of the mean posterior hyperparameter values
+
+
+    # compute Gaussian densities based on means and standard deviations
+    pdf_x1 <- mapply(dnorm,
+                     mean = post_hyper_param_x1$mean,
+                     sd = post_hyper_param_x1$stdev,
+                     MoreArgs = list(x = x1_eval),
+                     SIMPLIFY = FALSE)
+    pdf_x2 <- mapply(dnorm,
+                     mean = post_hyper_param_x2$mean,
+                     sd = post_hyper_param_x2$stdev,
+                     MoreArgs = list(x = x2_eval),
+                     SIMPLIFY = FALSE)
+
+    # add group names
+    names(pdf_x1) <- post_hyper_param_x1$iter
+    names(pdf_x2) <- post_hyper_param_x2$iter
+
+    # convert list to dataframe
+    pdf_x1 <- do.call(cbind.data.frame, pdf_x1)
+    pdf_x1$x1_eval <- x1_eval
+    pdf_x2 <- do.call(cbind.data.frame, pdf_x2)
+    pdf_x2$x2_eval <- x2_eval
+
+    # convert dataframe to long format
+    x1_long <- gather(pdf_x1, iter, density, -x1_eval)
+    x2_long <- gather(pdf_x2, iter, density, -x2_eval)
+
 
 
     if (plot == FALSE){
@@ -317,19 +512,32 @@ estimate_twochoiceRL <- function(data = NULL,
 
       # generate plot 1
       p1 <- ggplot(df,
-                   aes(x=true.x1,y=est.x1)) +
+                   aes(x=x1,y=x1_hat)) +
         geom_point() +
         geom_smooth(method = "lm", se = FALSE) +
-        ylim(-3,10) +
+        coord_cartesian(xlim=c(min(x1,x1_hat),
+                               max(x1,x1_hat)),
+                        ylim=c(min(x1,x1_hat),
+                               max(x1,x1_hat))) +
         labs(x = expression("x"[1]),
              y = expression(hat(x)[1])) +
-        theme_pubr() +
+        theme(#axis.title.y = element_blank(),
+              #axis.title.x = element_blank(),
+              #axis.text = element_blank(),
+              panel.background = element_rect(),
+              panel.grid.major = element_line(size=1),
+              panel.grid.minor = element_line(size=1),
+              axis.ticks = element_line(colour="black", size = 1.5),
+              panel.border = element_rect(colour = "black", fill = NA, size = 2.5),
+              legend.text = element_blank(),
+              legend.position = "none",
+              aspect.ratio = 1) +
         annotate("label",
-                 label = paste("bias =", round(bias(data$x1,eml_data[[2]]),3), "\n",
-                               "rmse =", round(rmse(data$x1,eml_data[[2]]),3),"\n",
-                               "r =", round(cor(data$x1, eml_data[[2]], method = "pearson"),3)),
-                 x=0,
-                 y=6.5,
+                 label = paste("bias =", round(bias(x1,x1_hat),3), "\n",
+                               "rmse =", round(rmse(x1,x1_hat),3),"\n",
+                               "r =", round(cor(x1,x1_hat, method = "pearson"),3)),
+                 x=max(x1)-1,
+                 y=min(x1_hat)+0.5,
                  size=4) +
 
         # add reference line
@@ -337,19 +545,32 @@ estimate_twochoiceRL <- function(data = NULL,
 
       # generate plot 2
       p2 <- ggplot(df,
-                   aes(x=true.x2,y=est.x2)) +
+                   aes(x=x2,y=x2_hat)) +
         geom_point() +
         geom_smooth(method = "lm", se = FALSE) +
-        ylim(-5,5) +
+        coord_cartesian(xlim=c(min(x2,x2_hat),
+                               max(x2,x2_hat)),
+                        ylim=c(min(x2,x2_hat),
+                               max(x2,x2_hat))) +
         labs(x = expression("x"[2]),
              y = expression(hat(x)[2])) +
-        theme_pubr() +
+        theme(#axis.title.y = element_blank(),
+              #axis.title.x = element_blank(),
+              #axis.text = element_blank(),
+              panel.background = element_rect(),
+              panel.grid.major = element_line(size=1),
+              panel.grid.minor = element_line(size=1),
+              axis.ticks = element_line(colour="black", size = 1.5),
+              panel.border = element_rect(colour = "black", fill = NA, size = 2.5),
+              legend.text = element_blank(),
+              legend.position = "none",
+              aspect.ratio = 1) +
         annotate("label",
-                 label = paste("bias =", round(bias(data$x2, eml_data[[3]]),3),"\n",
-                               "rmse =", round(rmse(data$x2, eml_data[[3]]),3),"\n",
-                               "r =", round(cor(data$x2, eml_data[[3]], method = "pearson"),3)),
-                 x=-1,
-                 y=3.6,
+                 label = paste("bias =", round(bias(x2, x2_hat),3),"\n",
+                               "rmse =", round(rmse(x2, x2_hat),3),"\n",
+                               "r =", round(cor(x2, x2_hat, method = "pearson"),3)),
+                 x=max(x2)-1,
+                 y=min(x2_hat)+0.5,
                  size=4) +
 
         # add reference line
@@ -359,9 +580,58 @@ estimate_twochoiceRL <- function(data = NULL,
       plot <- ggarrange(p1,p2, ncol = 2, nrow = 1,common.legend = TRUE,legend = 'bottom')
 
 
-      # return output
-      print(plot)
-      return(results)
+
+      # posterior hyperparameter joy plot (x1)
+      ggjoy_x1 <- ggplot(x1_long,
+                         aes(x = x1_eval, y = factor(iter),
+                             height = density, fill = factor(iter))) +
+        geom_density_ridges(stat="identity", alpha = 0.5, color = "white") +
+        theme(axis.title.y = element_blank(),
+              axis.title.x = element_blank(),
+              axis.text = element_blank(),
+              panel.background = element_rect(),
+              panel.grid.major = element_line(size=1),
+              panel.grid.minor = element_line(size=1),
+              axis.ticks = element_line(colour="black", size = 1.5),
+              panel.border = element_rect(colour = "black", fill = NA, size = 1.5),
+              #legend.text = element_blank(),
+              legend.position = "none",
+              aspect.ratio = 1) +
+            labs(x = "x1", y = "Iteration")
+
+      # posterior hyperparameter joy plot (x2)
+      ggjoy_x2 <- ggplot(x2_long,
+                         aes(x = x2_eval, y = factor(iter),
+                             height = density, fill = factor(iter))) +
+        geom_density_ridges(stat="identity", alpha = 0.5, color = "white") +
+        theme(axis.title.y = element_blank(),
+              axis.title.x = element_blank(),
+              axis.text = element_blank(),
+              panel.background = element_rect(),
+              panel.grid.major = element_line(size=1),
+              panel.grid.minor = element_line(size=1),
+              axis.ticks = element_line(colour="black", size = 1.5),
+              panel.border = element_rect(colour = "black", fill = NA, size = 1.5),
+              #legend.text = element_blank(),
+              legend.position = "none",
+              aspect.ratio = 1) +
+            labs(x = "x2", y = "Iteration")
+
+      ggjoy_x1x2 <- ggarrange(ggjoy_x1,ggjoy_x2, ncol = 2, nrow = 1)
+
+
+      # animated joy plot (x1)
+      ggjoy_x1_anim <- ggjoy_x1 +
+        transition_states(factor(iter), transition_length = 1, state_length = 1) +
+        shadow_mark()
+      # animated joy plot (x2)
+      ggjoy_x2_anim <- ggjoy_x2 +
+        transition_states(factor(iter), transition_length = 1, state_length = 1) +
+        shadow_mark()
+
+      # return all results and plots
+      return(list(results, p1, p2, plot, ggjoy_x1, ggjoy_x2, ggjoy_x1x2, ggjoy_x1_anim, ggjoy_x2_anim))
+
     } # end else statement for plotting EML results
 
 
@@ -382,10 +652,12 @@ estimate_twochoiceRL <- function(data = NULL,
 #'
 #' This function runs the MLE technique to recover behavior in a two-choice decision task.
 #' @param data simulated two-choice task data
-#' @param param randomly generated initial parameters.
+#' @param param randomly generated initial parameters
 #' @param fn objective function being minimized
 #' @param opt optimization algorithm used. Defaults to trust-region method (trm)
-#' @param nRes number of restarts. Defaults to 5.
+#' @param radius starting and maximum allowed trust region radius. Defaults to 1 and 5.
+#' @param nRes number of restarts. Defaults to 5
+#' @param progress_bar tracks completion time of function. Defaults to TRUE.
 #'
 #'
 #' @return A list containing the sum log-likelihood, mle estimates of parameter 1 per subject,
@@ -395,8 +667,7 @@ estimate_twochoiceRL <- function(data = NULL,
 #' @keywords internal
 #'
 #' @import trust
-#' @examples
-#' mle_twochoiceRL()
+
 
 
 
@@ -408,10 +679,12 @@ estimate_twochoiceRL <- function(data = NULL,
 ##########################################################################
 
 mle_twochoiceRL <- function(data = NULL,
-                           param = list(init.x1,init.x2),
-                           fn = "mle.objectiveFunction",
-                           opt = "TRM",
-                           nRes = 5){
+                            param = list(init_x1,init_x2),
+                            fn = "mle.objectiveFunction",
+                            opt = "TRM",
+                            radius = c(tr_rad[1],tr_rad[2]),
+                            nRes = nRes,
+                            progress_bar = progress_bar){
 
 
 
@@ -432,8 +705,9 @@ mle_twochoiceRL <- function(data = NULL,
   mle.ll.per.subj <- numeric()
 
 
-
-
+  if (progress_bar == TRUE){
+    pb <- txtProgressBar(min = 0, max = data$subjects, style = 3)
+  }
 
   for (i in 1:data$subjects){ # start loop for subjects
 
@@ -534,8 +808,9 @@ mle_twochoiceRL <- function(data = NULL,
      }
 
 
-
-    print(paste("working on subject", i, "..."))
+    if (progress_bar == FALSE){
+      print(paste("working on subject", i, "..."))
+    }
 
     # initialize list within a list for the trust results, log-likelihood value and hessian to store results at every restart
     mle.results[[i]] <- list()
@@ -543,66 +818,78 @@ mle_twochoiceRL <- function(data = NULL,
     hess_list.mle[[i]] <- list()
 
     # set random initial guesses for x1 and x2
-    init.x1 <- param[[1]][i]
-    init.x2 <- param[[2]][i]
+    init_x1 <- param[[1]][i]
+    init_x2 <- param[[2]][i]
 
     r = 1 # restart = 1
 
 
     while(r < nRes+1){ # start while loop for restarts
 
-      print(paste("initial guess for x1 and x2 is: ", round(init.x1,3), "and", round(init.x2,3), "on restart", r, "for subject", i))
-
+      if (progress_bar == FALSE){
+        print(paste("initial guess for x1 and x2 is: ", round(init_x1,3), "and", round(init_x2,3), "on restart", r, "for subject", i))
+      }
 
       out <- tryCatch({ # start catch statement
 
         if (opt == "TRM"){
-          mle.results[[i]][[r]] <- trust(mle.objfun, c(init.x1,init.x2),1,5)
+          mle.results[[i]][[r]] <- trust(mle.objfun, c(init_x1,init_x2),radius[1],radius[2])
         }
 
-        print(paste("trust was successful on restart", r, "for subject", i ))
-        print(paste("estimated x1 and estimated x2 are: ", round(mle.results[[i]][[r]]$argument[1],3), "and", round(mle.results[[i]][[r]]$argument[2],3), "on restart", r, "for subject", i))
-        print(paste("true x1 and true x2 are: ", round(data$x1[i],3), "and", round(data$x2[i],3), "on restart", r, "for subject", i))
+        if (progress_bar == FALSE){
+          print(paste("trust was successful on restart", r, "for subject", i ))
+          print(paste("estimated x1 and estimated x2 are: ", round(mle.results[[i]][[r]]$argument[1],3), "and", round(mle.results[[i]][[r]]$argument[2],3), "on restart", r, "for subject", i))
+          print(paste("true x1 and true x2 are: ", round(data$x1[i],3), "and", round(data$x2[i],3), "on restart", r, "for subject", i))
+        }
 
         1
 
       }, error = function(e){ # if error has been caught, print "caught error" message
-        message(paste("trust has failed on restart", r, "for subject", i, "trying different initial guess"))
+
+        if (progress_bar == FALSE){
+          message(paste("trust has failed on restart", r, "for subject", i, "trying different initial guess"))
+        }
+
         0
+
       })
 
 
-      #install.packages("numDeriv")
-      #      library(numDeriv)
       if (out == 1){
 
-        print(paste("checking for positive definite hessian on restart", r,"for subject", i))
+        if (progress_bar == FALSE){
+          print(paste("checking for positive definite hessian on restart", r,"for subject", i))
+        }
 
-
-        if ((det(mle.results[[i]][[r]]$hessian) > 0) && (diag(mle.results[[i]][[r]]$hessian) > 0 )){
+        if ((det(mle.results[[i]][[r]]$hessian) > 0) && (diag(mle.results[[i]][[r]]$hessian)[1] > 0 ) && (diag(mle.results[[i]][[r]]$hessian)[2] > 0 )){
 
           # store results from trust per restart for a subject
           value_list.mle[[i]][[r]] <- mle.results[[i]][[r]]$value              # store objective value per restart for a subject
           hess_list.mle[[i]][[r]] <- solve(mle.results[[i]][[r]]$hessian)      # store hessian value per restart for a subject
 
-          print(mle.results[[i]][[r]]$hessian)
+          if (progress_bar == FALSE){
+            print(mle.results[[i]][[r]]$hessian)
 
-          print(paste("restart", r, "is a good restart with positive definite hessian"))
-          print("---------------------------------------------------------------------------------------")
+            print(paste("restart", r, "is a good restart with positive definite hessian"))
+            print("---------------------------------------------------------------------------------------")
+          }
 
           r = r+1
 
 
-          init.x1 <-  rnorm(data$subjects,0,5)[i]
-          init.x2 <-  rnorm(data$subjects,0,5)[i]
+          init_x1 <-  rnorm(data$subjects,0,5)[i]
+          init_x2 <-  rnorm(data$subjects,0,5)[i]
 
 
 
         } else{
-          message(paste("caught non-positive definite hessian on restart", r, "for subject", i, "trying different initial guess"))
 
-          init.x1 <- rnorm(data$subjects,0,5)[i]
-          init.x2 <- rnorm(data$subjects,0,5)[i]
+          if (progress_bar == FALSE){
+            message(paste("caught non-positive definite hessian on restart", r, "for subject", i, "trying different initial guess"))
+          }
+
+          init_x1 <- rnorm(data$subjects,0,5)[i]
+          init_x2 <- rnorm(data$subjects,0,5)[i]
 
         }
       }
@@ -611,8 +898,8 @@ mle_twochoiceRL <- function(data = NULL,
 
       if (out == 0){
 
-        init.x1 <- rnorm(data$subjects,0,5)[i]
-        init.x2 <- rnorm(data$subjects,0,5)[i]
+        init_x1 <- rnorm(data$subjects,0,5)[i]
+        init_x2 <- rnorm(data$subjects,0,5)[i]
 
       }
     } # end while loop for restarts
@@ -631,7 +918,16 @@ mle_twochoiceRL <- function(data = NULL,
     mle.laplace.x1.per.subj[i] <- diag(hess_list.mle.per.subj[[i]])[1]      # for each subject, store laplacian for x1 parameter
     mle.laplace.x2.per.subj[i] <- diag(hess_list.mle.per.subj[[i]])[2]      # for each subject, store laplacian for x2 parameter
 
+    if (progress_bar == TRUE){
+      Sys.sleep(0.1)
+      setTxtProgressBar(pb, i)
+    }
+
   } # End for loop for subjects
+
+  if (progress_bar == TRUE){
+    close(pb)
+  }
 
   # output results from function
   list(sum(mle.ll.per.subj),                # sum log-likelihood
@@ -641,8 +937,8 @@ mle_twochoiceRL <- function(data = NULL,
        mle.laplace.x2.per.subj              # x2 laplacian value per subject
   )
 
-  #} # End MLE
-}
+
+} # End MLE
 
 
 
@@ -656,12 +952,13 @@ mle_twochoiceRL <- function(data = NULL,
 #' This function runs the MAP technique to recover behavior in a two-choice decision task.
 #' @param data simulated two-choice task data
 #' @param param randomly generated initial parameters.
-#' @param prior.mean mean priors for x1 and x2, respectively. Defaults to mean 0 for both parameters.
-#' @param prior.sd standard deviation priors for x1 and x2, respectively. Defaults to 5 for both parameters.
+#' @param prior_mean mean priors for x1 and x2, respectively. Defaults to mean 0 for both parameters.
+#' @param prior_sd standard deviation priors for x1 and x2, respectively. Defaults to 5 for both parameters.
 #' @param fn objective function being minimized
 #' @param opt optimization algorithm used. Defaults to trust-region method (trm)
+#' @param radius starting and maximum allowed trust region radius. Defaults to 1 and 5.
 #' @param nRes number of restarts. Defaults to 5.
-#'
+#' @param progress_bar track completion time of estimation. Defaults to TRUE.
 #'
 #' @return A list containing the sum log-likelihood, map estimates of parameter 1 per subject,
 #'         map estimates of parameter 2 per subject, laplace values of parameter 1 per subject,
@@ -670,33 +967,27 @@ mle_twochoiceRL <- function(data = NULL,
 #' @keywords internal
 #'
 #' @import trust
-#' @examples
-#' map_twochoiceRL()
-
-
-
-
-
-
 
 
 ##########################################################################
 
 map_twochoiceRL <- function(data = NULL,
-                           param = list(init.x1,init.x2),
-                           prior.mean = c(0,0),
-                           prior.sd = c(5,5),
+                           param = list(init_x1,init_x2),
+                           prior_mean = c(m1,m2),
+                           prior_sd = c(s1,s2),
                            fn = "map.objectiveFunction",
                            opt = "TRM",
-                           nRes = 5){
+                           radius = c(tr_rad[1],tr_rad[2]),
+                           nRes = nRes,
+                           progress_bar = progress_bar){
 
 
 
   # initialize prior mean and prior standard deviation for x1 and x2
-  m1 <- prior.mean[1]
-  s1 <- prior.sd[1]
-  m2 <- prior.mean[2]
-  s2 <- prior.sd[2]
+  m1 <- prior_mean[1]
+  s1 <- prior_sd[1]
+  m2 <- prior_mean[2]
+  s2 <- prior_sd[2]
 
 
   # intialize variables as lists
@@ -716,7 +1007,9 @@ map_twochoiceRL <- function(data = NULL,
   map.ll.per.subj <- numeric()
 
 
-
+  if (progress_bar == TRUE){
+    pb <- txtProgressBar(min = 0, max = data$subjects, style = 3)
+  }
 
 
   for (i in 1:data$subjects){ # start loop for subjects
@@ -840,7 +1133,9 @@ map_twochoiceRL <- function(data = NULL,
     }
 
 
-    print(paste("working on subject", i, "..."))
+    if (progress_bar == FALSE){
+      print(paste("working on subject", i, "..."))
+    }
 
     # initialize list within a list for the trust results, log-likelihood value and hessian to store results at every restart
     map.results[[i]] <- list()
@@ -848,32 +1143,40 @@ map_twochoiceRL <- function(data = NULL,
     hess_list.map[[i]] <- list()
 
     # set random initial guesses for x1 and x2
-    init.x1 <- param[[1]][i]
-    init.x2 <- param[[2]][i]
+    init_x1 <- param[[1]][i]
+    init_x2 <- param[[2]][i]
 
     r = 1 # restart = 1
 
 
     while(r < nRes+1){ # start while loop for restarts
 
-      print(paste("initial guess for x1 and x2 is: ", round(init.x1,3), "and", round(init.x2,3), "on restart", r, "for subject", i))
-
+      if (progress_bar == FALSE){
+        print(paste("initial guess for x1 and x2 is: ", round(init_x1,3), "and", round(init_x2,3), "on restart", r, "for subject", i))
+      }
 
       out <- tryCatch({ # start catch statement
 
         if (opt == "TRM"){
-          map.results[[i]][[r]] <- trust(map.objfun, c(init.x1,init.x2),1,5)
+          map.results[[i]][[r]] <- trust(map.objfun, c(init_x1,init_x2),radius[1],radius[2])
         }
 
-        print(paste("trust was successful on restart", r, "for subject", i ))
-        print(paste("estimated x1 and estimated x2 are: ", round(map.results[[i]][[r]]$argument[1],3), "and", round(map.results[[i]][[r]]$argument[2],3), "on restart", r, "for subject", i))
-        print(paste("true x1 and true x2 are: ", round(data$x1[i],3), "and", round(data$x2[i],3), "on restart", r, "for subject", i))
+        if (progress_bar == FALSE){
+          print(paste("trust was successful on restart", r, "for subject", i ))
+          print(paste("estimated x1 and estimated x2 are: ", round(map.results[[i]][[r]]$argument[1],3), "and", round(map.results[[i]][[r]]$argument[2],3), "on restart", r, "for subject", i))
+          print(paste("true x1 and true x2 are: ", round(data$x1[i],3), "and", round(data$x2[i],3), "on restart", r, "for subject", i))
+        }
 
         1
 
       }, error = function(e){ # if error has been caught, print "caught error" message
-        message(paste("trust has failed on restart", r, "for subject", i, "trying different initial guess"))
+
+        if (progress_bar == FALSE){
+          message(paste("trust has failed on restart", r, "for subject", i, "trying different initial guess"))
+        }
+
         0
+
       })
 
 
@@ -881,33 +1184,39 @@ map_twochoiceRL <- function(data = NULL,
       #      library(numDeriv)
       if (out == 1){
 
-        print(paste("checking for positive definite hessian on restart", r,"for subject", i))
+        if (progress_bar == FALSE){
+          print(paste("checking for positive definite hessian on restart", r,"for subject", i))
+        }
 
-
-        if ((det(map.results[[i]][[r]]$hessian) > 0) && (diag(map.results[[i]][[r]]$hessian) > 0 )){
+        if ((det(map.results[[i]][[r]]$hessian) > 0) && (diag(map.results[[i]][[r]]$hessian)[1] > 0 ) && (diag(map.results[[i]][[r]]$hessian)[2] > 0 )){
 
           # store results from trust per restart for a subject
           value_list.map[[i]][[r]] <- map.results[[i]][[r]]$value              # store objective value per restart for a subject
           hess_list.map[[i]][[r]] <- solve(map.results[[i]][[r]]$hessian)      # store hessian value per restart for a subject
 
-          print(map.results[[i]][[r]]$hessian)
+          if (progress_bar == FALSE){
+            print(map.results[[i]][[r]]$hessian)
 
-          print(paste("restart", r, "is a good restart with positive definite hessian"))
-          print("---------------------------------------------------------------------------------------")
+            print(paste("restart", r, "is a good restart with positive definite hessian"))
+            print("---------------------------------------------------------------------------------------")
+          }
 
           r = r+1
 
 
-          init.x1 <-  rnorm(data$subjects,0,5)[i]
-          init.x2 <-  rnorm(data$subjects,0,5)[i]
+          init_x1 <-  rnorm(data$subjects,0,5)[i]
+          init_x2 <-  rnorm(data$subjects,0,5)[i]
 
 
 
         } else{
-          message(paste("caught non-positive definite hessian on restart", r, "for subject", i, "trying different initial guess"))
 
-          init.x1 <- rnorm(data$subjects,0,5)[i]
-          init.x2 <- rnorm(data$subjects,0,5)[i]
+          if (progress_bar == FALSE){
+            message(paste("caught non-positive definite hessian on restart", r, "for subject", i, "trying different initial guess"))
+          }
+
+          init_x1 <- rnorm(data$subjects,0,5)[i]
+          init_x2 <- rnorm(data$subjects,0,5)[i]
 
         }
       }
@@ -916,8 +1225,8 @@ map_twochoiceRL <- function(data = NULL,
 
       if (out == 0){
 
-        init.x1 <- rnorm(data$subjects,0,5)[i]
-        init.x2 <- rnorm(data$subjects,0,5)[i]
+        init_x1 <- rnorm(data$subjects,0,5)[i]
+        init_x2 <- rnorm(data$subjects,0,5)[i]
 
       }
     } # end while loop for restarts
@@ -936,7 +1245,16 @@ map_twochoiceRL <- function(data = NULL,
     map.laplace.x1.per.subj[i] <- diag(hess_list.map.per.subj[[i]])[1]      # for each subject, store laplacian for x1 parameter
     map.laplace.x2.per.subj[i] <- diag(hess_list.map.per.subj[[i]])[2]      # for each subject, store laplacian for x2 parameter
 
+    if (progress_bar == TRUE){
+      Sys.sleep(0.1)
+      setTxtProgressBar(pb, i)
+    }
+
   } # End for loop for subjects
+
+  if (progress_bar == TRUE){
+    close(pb)
+  }
 
   # output results from function
   list(sum(map.ll.per.subj),                # sum log-likelihood
@@ -960,14 +1278,15 @@ map_twochoiceRL <- function(data = NULL,
 #' This function runs the EML technique to recover behavior in a two-choice decision task.
 #' @param data simulated two-choice task data
 #' @param param randomly generated initial parameters.
-#' @param prior.mean mean priors for x1 and x2, respectively. Defaults to mean 0 for both parameters.
-#' @param prior.sd standard deviation priors for x1 and x2, respectively. Defaults to 5 for both parameters.
+#' @param prior_mean mean priors for x1 and x2, respectively. Defaults to mean 0 for both parameters.
+#' @param prior_sd standard deviation priors for x1 and x2, respectively. Defaults to 5 for both parameters.
 #' @param fn objective function being minimized
 #' @param opt optimization algorithm used. Defaults to trust-region method (trm)
+#' @param radius starting and maximum allowed trust region radius. Defaults to 1 and 5.
 #' @param nRes number of restarts. Defaults to 5.
 #' @param iter iteration of algorithm
 #' @param eml_data data to be passed for succeeding iterations
-#'
+#' @param progress_bar track completion time of estimation. Defaults to TRUE.
 #'
 #' @return A list containing the sum log-likelihood, eml estimates of parameter 1 per subject,
 #'         eml estimates of parameter 2 per subject, laplace values of parameter 1 per subject,
@@ -976,11 +1295,6 @@ map_twochoiceRL <- function(data = NULL,
 #' @keywords internal
 #'
 #' @import trust
-#' @examples
-#' eml_twochoiceRL()
-
-
-
 
 
 
@@ -989,14 +1303,16 @@ map_twochoiceRL <- function(data = NULL,
 ##########################################################################
 
 eml_twochoiceRL <- function(data = NULL,
-                           param = list(init.x1,init.x2),
-                           prior.mean = c(0,0),
-                           prior.sd = c(5,5),
+                           param = list(init_x1,init_x2),
+                           prior_mean = c(m1,m2),
+                           prior_sd = c(s1,s2),
                            fn = "eml.objectiveFunction",
                            opt = "TRM",
-                           nRes = 5,
+                           radius = c(tr_rad[1],tr_rad[2]),
+                           nRes = nRes,
                            iter = iter,
-                           eml_data = eml_data){
+                           eml_data = eml_data,
+                           progress_bar = progress_bar){
 
 
 
@@ -1004,10 +1320,10 @@ eml_twochoiceRL <- function(data = NULL,
 
 
   # initialize prior mean and prior standard deviation for x1 and x2
-  m1 <- prior.mean[1]
-  s1 <- prior.sd[1]
-  m2 <- prior.mean[2]
-  s2 <- prior.sd[2]
+  m1 <- prior_mean[1]
+  s1 <- prior_sd[1]
+  m2 <- prior_mean[2]
+  s2 <- prior_sd[2]
 
 
   # intialize variables as lists
@@ -1027,7 +1343,9 @@ eml_twochoiceRL <- function(data = NULL,
   eml.ll.per.subj <- numeric()
 
 
-
+  if (progress_bar == TRUE){
+    pb <- txtProgressBar(min = 0, max = data$subjects, style = 3)
+  }
 
 
   for (i in 1:data$subjects){ # start loop for subjects
@@ -1150,8 +1468,9 @@ eml_twochoiceRL <- function(data = NULL,
       } # end of function that computes negative log-likelihood, gradient and Hessian of the function
    }
 
-
-    print(paste("working on subject", i, "..."))
+    if (progress_bar == FALSE){
+      print(paste("working on subject", i, "..."))
+    }
 
     # initialize list within a list for the trust results, log-likelihood value and hessian to store results at every restart
     eml.results[[i]] <- list()
@@ -1159,69 +1478,81 @@ eml_twochoiceRL <- function(data = NULL,
     hess_list.eml[[i]] <- list()
 
     # set random initial guesses for x1 and x2
-    init.x1 <- param[[1]][i]
-    init.x2 <- param[[2]][i]
+    init_x1 <- param[[1]][i]
+    init_x2 <- param[[2]][i]
 
     r = 1 # restart = 1
 
     # for kth iteration > 1 perform only 1 restart for each subject
     if (iter > 1){
-      nRes = 5
+      nRes = nRes
     }
 
     while(r < nRes+1){ # start while loop for restarts
 
-      print(paste("initial guess for x1 and x2 is: ", round(init.x1,3), "and", round(init.x2,3), "on restart", r, "for subject", i))
-
+      if (progress_bar == FALSE){
+        print(paste("initial guess for x1 and x2 is: ", round(init_x1,3), "and", round(init_x2,3), "on restart", r, "for subject", i))
+      }
 
       out <- tryCatch({ # start catch statement
 
         if (opt == "TRM"){
-          eml.results[[i]][[r]] <- trust(eml.objfun, c(init.x1,init.x2),1,5)
+          eml.results[[i]][[r]] <- trust(eml.objfun, c(init_x1,init_x2),radius[1],radius[2])
         }
 
-        print(paste("trust was successful on restart", r, "for subject", i ))
-        print(paste("estimated x1 and estimated x2 are: ", round(eml.results[[i]][[r]]$argument[1],3), "and", round(eml.results[[i]][[r]]$argument[2],3), "on restart", r, "for subject", i))
-        print(paste("true x1 and true x2 are: ", round(data$x1[i],3), "and", round(data$x2[i],3), "on restart", r, "for subject", i))
+        if (progress_bar == FALSE){
+          print(paste("trust was successful on restart", r, "for subject", i ))
+          print(paste("estimated x1 and estimated x2 are: ", round(eml.results[[i]][[r]]$argument[1],3), "and", round(eml.results[[i]][[r]]$argument[2],3), "on restart", r, "for subject", i))
+          print(paste("true x1 and true x2 are: ", round(data$x1[i],3), "and", round(data$x2[i],3), "on restart", r, "for subject", i))
+        }
 
         1
 
       }, error = function(e){ # if error has been caught, print "caught error" message
-        message(paste("trust has failed on restart", r, "for subject", i, "trying different initial guess"))
+
+        if (progress_bar == FALSE){
+          message(paste("trust has failed on restart", r, "for subject", i, "trying different initial guess"))
+        }
+
         0
       })
 
 
       if (iter == 1){
         if (out == 1){
-          #  out1 <- tryCatch({
 
-          print(paste("checking for positive definite hessian on restart", r,"for subject", i))
+          if (progress_bar == FALSE){
+            print(paste("checking for positive definite hessian on restart", r,"for subject", i))
+          }
 
-
-          if ((det(eml.results[[i]][[r]]$hessian) > 0) && (diag(eml.results[[i]][[r]]$hessian) > 0 )){
+          if ((det(eml.results[[i]][[r]]$hessian) > 0) && (diag(eml.results[[i]][[r]]$hessian)[1] > 0 ) && (diag(eml.results[[i]][[r]]$hessian)[2] > 0 )){
 
             # store results from optim per restart for a subject
             value_list.eml[[i]][[r]] <- eml.results[[i]][[r]]$value              # store objective value per restart for a subject
             hess_list.eml[[i]][[r]] <- solve(eml.results[[i]][[r]]$hessian)      # store hessian value per restart for a subject
 
-            print(eml.results[[i]][[r]]$hessian)
+            if (progress_bar == FALSE){
+              print(eml.results[[i]][[r]]$hessian)
 
-            print(paste("restart", r, "is a good restart with positive definite hessian"))
-            print("---------------------------------------------------------------------------------------")
+              print(paste("restart", r, "is a good restart with positive definite hessian"))
+              print("---------------------------------------------------------------------------------------")
+            }
 
             r = r+1
 
-            init.x1 <-  rnorm(data$subjects,0,5)[i]
-            init.x2 <-  rnorm(data$subjects,0,5)[i]
+            init_x1 <-  rnorm(data$subjects,0,5)[i]
+            init_x2 <-  rnorm(data$subjects,0,5)[i]
 
 
 
           } else{
-            message(paste("caught non-positive definite hessian on restart", r, "for subject", i, "trying different initial guess"))
 
-            init.x1 <- rnorm(data$subjects,0,5)[i]
-            init.x2 <- rnorm(data$subjects,0,5)[i]
+            if (progress_bar == FALSE){
+              message(paste("caught non-positive definite hessian on restart", r, "for subject", i, "trying different initial guess"))
+            }
+
+            init_x1 <- rnorm(data$subjects,0,5)[i]
+            init_x2 <- rnorm(data$subjects,0,5)[i]
 
           }
         }
@@ -1233,32 +1564,39 @@ eml_twochoiceRL <- function(data = NULL,
       if (iter > 1){
         if (out == 1){
 
-          print(paste("checking for positive definite hessian on restart", r,"for subject", i))
+          if (progress_bar == FALSE){
+            print(paste("checking for positive definite hessian on restart", r,"for subject", i))
+          }
 
 
-          if ((det(eml.results[[i]][[r]]$hessian) > 0) && (diag(eml.results[[i]][[r]]$hessian) > 0 )){
+          if ((det(eml.results[[i]][[r]]$hessian) > 0) && (diag(eml.results[[i]][[r]]$hessian)[1] > 0 ) && (diag(eml.results[[i]][[r]]$hessian)[2] > 0 )){
 
             # store results from optim per restart for a subject
             value_list.eml[[i]][[r]] <- eml.results[[i]][[r]]$value               # store objective value per restart for a subject
             hess_list.eml[[i]][[r]] <- solve(eml.results[[i]][[r]]$hessian)       # store hessian value per restart for a subject
 
-            print(eml.results[[i]][[r]]$hessian)
+            if (progress_bar == FALSE){
+              print(eml.results[[i]][[r]]$hessian)
 
-            print(paste("restart", r, "is a good restart with positive definite hessian"))
-            print("---------------------------------------------------------------------------------------")
+              print(paste("restart", r, "is a good restart with positive definite hessian"))
+              print("---------------------------------------------------------------------------------------")
+            }
 
             r = r+1
 
-            init.x1 <- eml_data[[2]][i] + rnorm(data$subjects,0,5)[i]
-            init.x2 <- eml_data[[3]][i] + rnorm(data$subjects,0,5)[i]
+            init_x1 <- eml_data[[2]][i] + rnorm(data$subjects,0,5)[i]
+            init_x2 <- eml_data[[3]][i] + rnorm(data$subjects,0,5)[i]
 
 
 
           } else{
-            message(paste("caught non-positive definite hessian on restart", r, "for subject", i, "trying different initial guess"))
 
-            init.x1 <- eml_data[[2]][i] + rnorm(data$subjects,0,5)[i]
-            init.x2 <- eml_data[[3]][i] + rnorm(data$subjects,0,5)[i]
+            if (progress_bar == FALSE){
+              message(paste("caught non-positive definite hessian on restart", r, "for subject", i, "trying different initial guess"))
+            }
+
+            init_x1 <- eml_data[[2]][i] + rnorm(data$subjects,0,5)[i]
+            init_x2 <- eml_data[[3]][i] + rnorm(data$subjects,0,5)[i]
 
           }
         }
@@ -1268,15 +1606,15 @@ eml_twochoiceRL <- function(data = NULL,
 
       if (iter == 1 && out == 0){
 
-        init.x1 <- rnorm(data$subjects,0,5)[i]
-        init.x2 <- rnorm(data$subjects,0,5)[i]
+        init_x1 <- rnorm(data$subjects,0,5)[i]
+        init_x2 <- rnorm(data$subjects,0,5)[i]
 
       }
 
       if (iter > 1 && out == 0){
 
-        init.x1 <- eml_data[[2]][i] + rnorm(data$subjects,0,5)[i]
-        init.x2 <- eml_data[[3]][i] + rnorm(data$subjects,0,5)[i]
+        init_x1 <- eml_data[[2]][i] + rnorm(data$subjects,0,5)[i]
+        init_x2 <- eml_data[[3]][i] + rnorm(data$subjects,0,5)[i]
 
       }
 
@@ -1296,7 +1634,16 @@ eml_twochoiceRL <- function(data = NULL,
     eml.laplace.x1.per.subj[i] <- diag(hess_list.eml.per.subj[[i]])[1]      # for each subject, store laplacian for x1 parameter
     eml.laplace.x2.per.subj[i] <- diag(hess_list.eml.per.subj[[i]])[2]      # for each subject, store laplacian for x2 parameter
 
+    if (progress_bar == TRUE){
+      Sys.sleep(0.1)
+      setTxtProgressBar(pb, i)
+    }
+
   } # End for loop for subjects
+
+  if (progress_bar == TRUE){
+    close(pb)
+  }
 
   # output results from function
   list(sum(eml.ll.per.subj),                # sum log-likelihood

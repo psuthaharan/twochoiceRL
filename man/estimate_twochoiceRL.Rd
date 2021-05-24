@@ -4,31 +4,66 @@
 \alias{estimate_twochoiceRL}
 \title{Estimate behavior in a two-choice decision task}
 \usage{
-estimate_twochoiceRL(data = NULL, method = "mle", plot = TRUE)
+estimate_twochoiceRL(
+  seed_value = 528,
+  data = NULL,
+  method = "mle",
+  nRes = 5,
+  tr_rad = c(1, 5),
+  prior_mean = c(NULL, NULL),
+  prior_sd = c(NULL, NULL),
+  plot = FALSE,
+  progress_bar = TRUE
+)
 }
 \arguments{
+\item{seed_value}{user-specified random value that ensures replication of results. Defaults to 528.}
+
 \item{data}{simulated two-choice task data}
 
-\item{method}{parameter estimation technique used; either maximum-likelihood estimation (mle),
-maximum a posteriori (map) or expectation-maximization with laplace approximation (eml).
-Defaults to mle.}
+\item{method}{parameter estimation technique used; either maximum-likelihood
+estimation (mle), maximum a posteriori (map) or expectation-maximization
+with laplace approximation (eml). Defaults to mle.}
 
-\item{plot}{visualize estimation performance between true parameters vs estimated parameters.
-Defaults to TRUE.}
+\item{nRes}{number of restarts. Defaults to 5.}
+
+\item{tr_rad}{starting and maximum allowed trust region radius. Defaults to 1 and 5.}
+
+\item{prior_mean}{initial prior means of parameters (x1,x2). Set value if method = "map" or "eml".}
+
+\item{prior_sd}{initial prior standard deviations of parameters (x1,x2). Set value if method = "map" or "eml".}
+
+\item{plot}{visualize estimation performance between true parameters vs
+estimated parameters. Defaults to FALSE.}
+
+\item{progress_bar}{track completion time of estimation procedure. Defaults to TRUE.}
 }
 \value{
-A plot illustrating the correlation between the true parameters and estimated parameters, and a list
-        containing a dataframe of the true and estimated parameter values, the correlation value of
-        parameter 1, and the correlation value of parameter 2.
+A list containing a dataframe of the true and estimated parameter
+  values, the measures of the bias, rmse and pearson correlation of parameters x1
+  and x2, the posterior hyperparameters (if method = "eml") per iteration,
+  plot (if plot = TRUE) of the relationship between the true and estimated
+  parameter values, and a plot (if method = eml and plot = TRUE) of the posterior
+  hyperparameters per iteration.
 }
 \description{
-This function performs parameter estimation to recover behavior in a two-choice decision task
+This function performs parameter estimation to recover behavior in a
+two-choice decision task
 }
 \examples{
 
-# Save simulated task data to a variable, say, data
-data <- simulate_twochoiceRL(trials.unique = TRUE)
+# Save simulated task data to a variable, say, data_sim
+data_sim <- simulate_twochoiceRL(trials_unique = TRUE)
 
 # Recover behavioral parameters using maximum-likelihood estimation (MLE)
-estimate_twochoiceRL(data = data, method = "mle", plot=TRUE)
+est_mle <- estimate_twochoiceRL(data = data_sim, method = "mle", plot=FALSE)
+
+# View the true and MLE-estimated parameter values
+View(est_mle[[1]]$value)
+
+# If plot=TRUE, view correlation plot between the true and MLE-estimated parameter for x1
+View(est_mle[[2]])
+
+
+
 }

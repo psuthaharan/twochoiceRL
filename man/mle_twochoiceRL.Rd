@@ -6,22 +6,28 @@
 \usage{
 mle_twochoiceRL(
   data = NULL,
-  param = list(init.x1, init.x2),
+  param = list(init_x1, init_x2),
   fn = "mle.objectiveFunction",
   opt = "TRM",
-  nRes = 5
+  radius = c(tr_rad[1], tr_rad[2]),
+  nRes = nRes,
+  progress_bar = progress_bar
 )
 }
 \arguments{
 \item{data}{simulated two-choice task data}
 
-\item{param}{randomly generated initial parameters.}
+\item{param}{randomly generated initial parameters}
 
 \item{fn}{objective function being minimized}
 
 \item{opt}{optimization algorithm used. Defaults to trust-region method (trm)}
 
-\item{nRes}{number of restarts. Defaults to 5.}
+\item{radius}{starting and maximum allowed trust region radius. Defaults to 1 and 5.}
+
+\item{nRes}{number of restarts. Defaults to 5}
+
+\item{progress_bar}{tracks completion time of function. Defaults to TRUE.}
 }
 \value{
 A list containing the sum log-likelihood, mle estimates of parameter 1 per subject,
@@ -30,8 +36,5 @@ A list containing the sum log-likelihood, mle estimates of parameter 1 per subje
 }
 \description{
 This function runs the MLE technique to recover behavior in a two-choice decision task.
-}
-\examples{
-mle_twochoiceRL()
 }
 \keyword{internal}

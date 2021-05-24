@@ -1,9 +1,9 @@
 Package: twochoiceRL
 Type: Package
 Title: Modeling Behavior for Two-Choice Decisions
-Version: 0.1.0
-Authors@R:
-  c(person(given = "Praveen",
+Version: 0.0.0.9000
+Authors@R: c(
+    person(given = "Praveen",
            family = "Suthaharan",
            role = c("aut", "cre"),
            email = "praveen.suthaharan@yale.edu"),
@@ -24,7 +24,7 @@ Description: Provides functions for (1) simulating a two-choice decision dataset
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.1.0
+RoxygenNote: 7.1.1
 Imports: 
     foreach,
     ggplot2,
@@ -32,10 +32,16 @@ Imports:
     gganimate,
     trust,
     Metrics,
+    stats,
     ggthemes,
-    grid
+    grid,
+    tidyr,
+    ggridges,
+    ggjoy
 Suggests: 
     knitr,
     rmarkdown
 URL: https://github.com/psuthaharan/twochoiceRL
 BugReports: https://github.com/psuthaharan/twochoiceRL/issues
+VignetteBuilder: 
+    knitr

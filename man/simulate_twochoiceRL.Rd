@@ -8,44 +8,47 @@ simulate_twochoiceRL(
   seed_value = 528,
   n_subj = 100,
   n_tr = 200,
-  x1_mean = 1,
-  x1_sd = 1,
-  x2_mean = 0,
-  x2_sd = 1,
-  trials_unique = TRUE
+  mean_x = c(1, 0),
+  stdev_x = c(1, 1),
+  mean_payoff = c(1, -1),
+  stdev_payoff = c(2, 2),
+  trials_unique = TRUE,
+  progress_bar = TRUE
 )
 }
 \arguments{
-\item{seed_value}{user-specified random value that stores data information for replication. Defaults to 528.}
+\item{seed_value}{user-specified random value that ensures replication of results. Defaults to 528.}
 
 \item{n_subj}{number of subjects. Defaults to 100.}
 
 \item{n_tr}{number of trials. Defaults to 200.}
 
-\item{x1_mean}{mean value of the re-parameterized variable for beta. Defaults to 1.}
+\item{mean_x}{mean of the distribution that we are sampling from for the re-parameterized parameters. Defaults to 1 and 0 for x1 and x2, respectively.}
 
-\item{x1_sd}{standard deviation of the re-parameterized variable for beta. Defaults to 1.}
+\item{stdev_x}{standard deviation of the distribution that we are sampling from for the re-parameterized parameters. Defaults to 1 and 1 for x1 and x2, respectively.}
 
-\item{x2_mean}{mean value of the re-parameterized variable for alpha. Defaults to 0.}
+\item{mean_payoff}{mean payoff for both choices. Defaults to 1 and -1 for choice 1 and choice 2, respectively.}
 
-\item{x2_sd}{standard deviation of the re-parameterized variable for beta. Deafults to 1.}
+\item{stdev_payoff}{standard deviation payoff for both choices. Defaults to 2 and 2 for choice 1 and choice 2, respectively.}
 
 \item{trials_unique}{keep only the unique trials where an individual made a choice. Defaults to TRUE.}
+
+\item{progress_bar}{track completion time of estimation. Defaults to TRUE.}
 }
 \value{
-A list containing the two-choice dataset, the number of simulated subjects,
-        the 'true' values for parameter 1 (x1) and the 'true' values for parameter 2 (x2). The
-        dataset contains the trial number (Trial), the expected value (Value),
-        the choice probability (Pr), the presented stimuli (Option), the chosen stimuli (Action),
-        and the given reward (Reward).
+A list containing a list of the two-choice dataset for each subject, the number of simulated
+  subjects, the 'true' values for re-parameterized parameter 1 (x1) and parameter 2 (x2) for each subject.
+  The dataset contains the trial number (Trial), the expected value (Value), the choice probability (Pr),
+  the presented stimulus (Option), the chosen stimulus (Action), and the given reward (Reward).
 }
 \description{
-This function allows users to simulate behavior of \code{n_subj} individuals performing a two-choice task.
+This function allows users to simulate behavior of \code{n_subj} individuals
+performing a two-choice task.
 }
 \examples{
-# Simulate 50 subjects performing 100 trials in a two-choice decision task
-  data <- simulate_twochoiceRL(n_subj = 50, n_tr = 100)
+# Simulate 100 subjects performing 200 trials of a two-choice decision task
+  data_sim <- simulate_twochoiceRL(n_subj = 100, n_tr = 200)
 
-# View behavioral data of simulated subject 10
-  View(data$twochoiceRL[[10]])
+# View behavioral data of subject 100
+  View(data_sim$twochoiceRL[[100]])
 }

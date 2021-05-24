@@ -7,7 +7,7 @@
 plot_twochoiceRL(
   data = NULL,
   subj = 100,
-  colors = c("orange", "purple"),
+  colors = c("#009999", "#0000FF"),
   plot_type = "static"
 )
 }
@@ -16,21 +16,22 @@ plot_twochoiceRL(
 
 \item{subj}{subject data to plot. Defaults to subject 100.}
 
-\item{colors}{color to represent the two choices - choice A or choice B. Defaults to orange for choice A and purple for choice B.}
+\item{colors}{color to represent the two choices - choice A or choice B.
+Defaults to orange for choice A and purple for choice B.}
 
-\item{plot_type}{produce either static or animated version of the plot}
+\item{plot_type}{produce either static or animated version of the plot. Defaults to static.}
 }
 \value{
-A plot of individual \code{subj} behavior data.
+A plot of the simulated decision-making behavior of individual \code{subj}.
 }
 \description{
 This function plots the simulated two-choice task data.
 }
 \examples{
 
-# Save simulated task data to a variable, say, data
-data <- simulate_twochoiceRL(trials_unique = FALSE)
+# Save simulated task data to a variable, say, data_sim
+data_sim <- simulate_twochoiceRL(trials_unique = FALSE)
 
-# Plot the behavior of individual 34
-plot_twochoiceRL(data = data, subj = 34, colors = c("#749dae","#5c1a33"))
+# Plot the behavior of individual 100
+plot_twochoiceRL(data = data_sim, subj = 100, colors = c("#009999","#0000FF"))
 }

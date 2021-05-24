@@ -15,7 +15,4 @@ choice probability value
 \description{
 This function converts expected value to choice probability.
 }
-\examples{
-softmax()
-}
 \keyword{internal}
