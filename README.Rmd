@@ -18,13 +18,13 @@ knitr::opts_chunk$set(
 <!-- badges: start -->
 <!-- badges: end -->
 
-See [Suthaharan, P., Corlett, P.R., & Ang, Y.S. (2021). Computational modeling of behavioral tasks: An illustration from a classic reinforcement learning paradigm]() for more detail.
+See [Suthaharan, P., Corlett, P.R., & Ang, Y.S. (2021). Computational modeling of behavioral tasks: An illustration on a classic reinforcement learning paradigm]() for more detail.
 
 Questions? Contact Praveen Suthaharan (praveen.suthaharan@yale.edu).
 
 —————
 
-The goal of *twochoiceRL* is to educate users on how to simulate two-choice decision behavior and, subsequently, take the simulated data and estimate the behavioral parameters.
+The goal of *twochoiceRL* is to guide users on how to simulate two-choice decision behavior and, subsequently, to estimate (or recover) the behavioral parameters used to simulate the behavior.
 
 ## Installation
 
@@ -45,7 +45,7 @@ devtools::install_github("psuthaharan/twochoiceRL")
 
 Simulate behavior:
 
-```{r data}
+```{r data, message=FALSE, results='hide'}
 library(twochoiceRL)
 # generate 100 individuals
 # dataset1 contains behavioral data keeping only those selected-choice trials
@@ -64,16 +64,18 @@ Plot behavior:
 # for plotting purpose - let's use dataset2
 # You randomly select a participant to observe his/her behavior
 
-# Participant 100
-# View first 10 rows of data
+# View first 10 rows of individual 100's data
 head(dataset2$twochoiceRL[[100]],10)
 
 
 # Visualize behavior 
-plot_twochoiceRL(data = dataset2, subj = 100, colors = c("#749dae","#5c1a33"))
+p1 <- plot_twochoiceRL(data = dataset2, subj = 100, colors = c("#009999","#0000FF"))
 
-# Visualize behavior - animated 
-plot_twochoiceRL(data = dataset2, subj = 100, colors = c("#749dae","#5c1a33"), plot_type = "animate")
+# View expected value AND choice probability
+p1[[3]]
+
+# Visualize choice probability - animated 
+plot_twochoiceRL(data = dataset2, subj = 100, colors = c("#009999","#0000FF"), plot_type = "animate")
 
 
 ```
@@ -82,19 +84,40 @@ plot_twochoiceRL(data = dataset2, subj = 100, colors = c("#749dae","#5c1a33"), p
 ## Estimation
 
 Estimate behavioral parameters from simulated data:
-
+  
 ```{r estimation, message=FALSE, results='hide'}
-# Run MLE (elapsed time: ~ 6 min)
-estimate_twochoiceRL(data = dataset1, method = "mle", plot = TRUE)
+# Run MLE (elapsed time: ~ 5 min)
+est_mle <- estimate_twochoiceRL(data = dataset1,
+                                method = "mle",
+                                plot = TRUE)
+est_mle[[4]] # return MLE-estimation plot
 
 # Run MAP (elapsed time: ~ 5 min)
-estimate_twochoiceRL(data = dataset1, method = "map", plot = TRUE)
+est_map <- estimate_twochoiceRL(data = dataset1,
+                                method = "map",
+                                prior_mean = c(0,0),
+                                prior_sd = c(5,5),
+                                plot = TRUE)
+est_map[[4]] # return MAP-estimation plot
 
 # Run EML (elapsed time: ~ 1.4 hours)
-estimate_twochoiceRL(data = dataset1, method = "eml", plot = TRUE)
+est_eml <- estimate_twochoiceRL(data = dataset1,
+                                method = "eml",
+                                prior_mean = c(0,0),
+                                prior_sd = c(5,5),
+                                plot = TRUE)
+est_eml[[4]] # return EML-estimation plot
 ```
 
 
+Visualize the posterior hyperparameters per EML-iteration:
+  
+```{r hyperparameters}
+# Laplace-approximated posterior hyperparameters
+# for x1 AND x2
+est_eml[[7]]
 
-
+# x1, animated
+est_eml[[8]]
+```
 

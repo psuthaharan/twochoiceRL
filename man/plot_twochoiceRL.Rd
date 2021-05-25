@@ -22,7 +22,8 @@ Defaults to orange for choice A and purple for choice B.}
 \item{plot_type}{produce either static or animated version of the plot. Defaults to static.}
 }
 \value{
-A plot of the simulated decision-making behavior of individual \code{subj}.
+A plot of individual \code{subj}'s expected value across trials, a plot of individual \code{subj}'s
+  probability across trials, and a side-by-side plot of both of the previous plots.
 }
 \description{
 This function plots the simulated two-choice task data.

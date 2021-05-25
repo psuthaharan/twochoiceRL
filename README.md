@@ -8,17 +8,17 @@
 <!-- badges: end -->
 
 See [Suthaharan, P., Corlett, P.R., & Ang, Y.S. (2021). Computational
-modeling of behavioral tasks: An illustration from a classic
-reinforcement learning paradigm]() for more detail.
+modeling of behavioral tasks: An illustration on a classic reinforcement
+learning paradigm]() for more detail.
 
 Questions? Contact Praveen Suthaharan (<praveen.suthaharan@yale.edu>).
 
 —————
 
-The goal of *twochoiceRL* is to educate users on how to simulate
-two-choice decision behavior and, subsequently, take the simulated data
-and estimate the behavioral
-parameters.
+The goal of *twochoiceRL* is to guide users on how to simulate
+two-choice decision behavior and, subsequently, to estimate (or recover)
+the behavioral parameters used to simulate the
+behavior.
 
 ## Installation
 
@@ -60,8 +60,7 @@ Plot behavior:
 # for plotting purpose - let's use dataset2
 # You randomly select a participant to observe his/her behavior
 
-# Participant 100
-# View first 10 rows of data
+# View first 10 rows of individual 100's data
 head(dataset2$twochoiceRL[[100]],10)
 #>    Trial        Value        Pr Option Action      Reward
 #> 1      1  0.011472946 0.5000000      1      1  0.07437611
@@ -77,15 +76,18 @@ head(dataset2$twochoiceRL[[100]],10)
 
 
 # Visualize behavior 
-plot_twochoiceRL(data = dataset2, subj = 100, colors = c("#749dae","#5c1a33"))
+p1 <- plot_twochoiceRL(data = dataset2, subj = 100, colors = c("#009999","#0000FF"))
+
+# View expected value AND choice probability
+p1[[3]]
 ```
 
 <img src="man/figures/README-plot-2.png" width="100%" />
 
 ``` r
 
-# Visualize behavior - animated 
-plot_twochoiceRL(data = dataset2, subj = 100, colors = c("#749dae","#5c1a33"), plot_type = "animate")
+# Visualize choice probability - animated 
+plot_twochoiceRL(data = dataset2, subj = 100, colors = c("#009999","#0000FF"), plot_type = "animate")
 ```
 
 <img src="man/figures/README-plot-1.gif" width="100%" />
@@ -95,8 +97,11 @@ plot_twochoiceRL(data = dataset2, subj = 100, colors = c("#749dae","#5c1a33"), p
 Estimate behavioral parameters from simulated data:
 
 ``` r
-# Run MLE (elapsed time: ~ 6 min)
-estimate_twochoiceRL(data = dataset1, method = "mle", plot = TRUE)
+# Run MLE (elapsed time: ~ 5 min)
+est_mle <- estimate_twochoiceRL(data = dataset1,
+                                method = "mle",
+                                plot = TRUE)
+est_mle[[4]] # return MLE-estimation plot
 ```
 
 <img src="man/figures/README-estimation-1.png" width="100%" />
@@ -104,7 +109,12 @@ estimate_twochoiceRL(data = dataset1, method = "mle", plot = TRUE)
 ``` r
 
 # Run MAP (elapsed time: ~ 5 min)
-estimate_twochoiceRL(data = dataset1, method = "map", plot = TRUE)
+est_map <- estimate_twochoiceRL(data = dataset1,
+                                method = "map",
+                                prior_mean = c(0,0),
+                                prior_sd = c(5,5),
+                                plot = TRUE)
+est_map[[4]] # return MAP-estimation plot
 ```
 
 <img src="man/figures/README-estimation-2.png" width="100%" />
@@ -112,7 +122,30 @@ estimate_twochoiceRL(data = dataset1, method = "map", plot = TRUE)
 ``` r
 
 # Run EML (elapsed time: ~ 1.4 hours)
-estimate_twochoiceRL(data = dataset1, method = "eml", plot = TRUE)
+est_eml <- estimate_twochoiceRL(data = dataset1,
+                                method = "eml",
+                                prior_mean = c(0,0),
+                                prior_sd = c(5,5),
+                                plot = TRUE)
+est_eml[[4]] # return EML-estimation plot
 ```
 
 <img src="man/figures/README-estimation-3.png" width="100%" />
+
+Visualize the posterior hyperparameters per EML-iteration:
+
+``` r
+# Laplace-approximated posterior hyperparameters
+# for x1 AND x2
+est_eml[[7]]
+```
+
+<img src="man/figures/README-hyperparameters-2.png" width="100%" />
+
+``` r
+
+# x1, animated
+est_eml[[8]]
+```
+
+<img src="man/figures/README-hyperparameters-1.gif" width="100%" />

@@ -8,7 +8,8 @@
 #' @param plot_type produce either static or animated version of the plot. Defaults to static.
 #'
 #'
-#' @return A plot of the simulated decision-making behavior of individual \code{subj}.
+#' @return A plot of individual \code{subj}'s expected value across trials, a plot of individual \code{subj}'s
+#'   probability across trials, and a side-by-side plot of both of the previous plots.
 #'
 #' @export
 #'
@@ -107,14 +108,14 @@ plot_twochoiceRL <- function(data = NULL,
            panel.border = element_rect(colour = "black", fill = NA, size = 2.5),
            legend.text = element_blank(),
            legend.position = "none",
-           aspect.ratio = 1) +
+           aspect.ratio = 1)
 
 
 
    ## Animated Plot
-   animate.plot <- plot + transition_reveal(along = data$twochoiceRL[[subj]]$Trial)
+   animate_plot <- plot + transition_reveal(along = data$twochoiceRL[[subj]]$Trial)
 
-   return(animate.plot)
+   return(animate_plot)
 
  } # end animation plot
 
