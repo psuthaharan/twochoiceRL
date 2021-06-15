@@ -16,8 +16,8 @@ Questions? Contact Praveen Suthaharan (<praveen.suthaharan@yale.edu>).
 —————
 
 The goal of *twochoiceRL* is to guide users on how to simulate
-two-choice decision behavior and, subsequently, to estimate (or recover)
-the behavioral parameters used to simulate the
+two-choice decision behavior and then how to recover
+the behavioral parameters that were used to simulate the
 behavior.
 
 ## Installation
