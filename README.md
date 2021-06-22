@@ -9,7 +9,7 @@
 
 See [Suthaharan, P., Corlett, P.R., & Ang, Y.S. (2021). Computational
 modeling of behavioral tasks: An illustration on a classic reinforcement
-learning paradigm]() for more detail.
+learning paradigm](https://www.tqmp.org/RegularArticles/vol17-2/p105/p105.pdf) for more detail.
 
 Questions? Contact Praveen Suthaharan (<praveen.suthaharan@yale.edu>).
 
